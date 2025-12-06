@@ -192,9 +192,9 @@ Running the pipeline generates:
 
 ## 🔗 Related Projects
 
-**Want to process your point cloud further?** Check out my ground segmentation project:
+**If you want to process your point cloud further** Check out my ground segmentation project:
 
-👉 [**3D-PointCloud-Ground-Segmentation-using-RANSAC**](https://github.com/deevinandu/3D-PointCloud-Ground-Segmentation-using-RANSAC)
+👉 [**UAV-3D-PointCloud-Ground-Segmentation-RANSAC**](https://github.com/deevinandu/UAV-3D-PointCloud-Ground-Segmentation-RANSAC)
 
 Use RANSAC plane fitting to separate ground surfaces from objects in your point cloud — perfect for robotics and autonomous vehicle applications.
 
