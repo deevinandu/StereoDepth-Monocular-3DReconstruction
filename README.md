@@ -25,10 +25,12 @@
 
 | Feature | Description |
 |---------|-------------|
-| 📐 **Automatic Rectification** | Uses SIFT feature matching + Fundamental Matrix estimation to align uncalibrated handheld images |
-| 🖼️ **Dense Disparity Mapping** | Implements Semi-Global Block Matching (SGBM) for robust pixel-level correspondence |
+| 📐 **Automatic Rectification** | Optional SIFT feature matching + Fundamental Matrix estimation for handheld images (can skip for tripod captures) |
+| 🖼️ **Dense Disparity Mapping** | Implements Semi-Global Block Matching (SGBM) optimized for larger baselines with 3-way mode |
 | 🔧 **WLS Filtering** | Applies Weighted Least Squares smoothing to preserve edges while reducing noise |
-| 🌐 **3D Point Cloud Export** | Generates colored `.ply` files viewable in MeshLab, CloudCompare, or Blender |
+| � **Interactive 3D Viewer** | Opens an interactive point cloud window with zoom, pan, and tilt controls using Open3D |
+| 🖱️ **Depth Hover Display** | Hover your mouse over the depth map to see exact depth values in real-time |
+| �🌐 **3D Point Cloud Export** | Generates colored `.ply` files viewable in MeshLab, CloudCompare, or Blender |
 | ⚡ **Configurable Pipeline** | Easily tune camera parameters and algorithm settings for your specific hardware |
 
 ---
@@ -56,40 +58,65 @@ pip install -r requirements.txt
 
 ### Dependencies
 - `numpy` — Numerical computing
-- `opencv-python` — Core image processing
-- `opencv-contrib-python` — SIFT, WLS filter, and extra modules
-- `matplotlib` — Visualization
+- `opencv-contrib-python` — Image processing with SIFT, WLS filter, and stereo algorithms
+- `matplotlib` — 2D visualization and interactive depth hover
+- `open3d` — Interactive 3D point cloud viewer with zoom/pan/tilt controls
 
 ---
 
 ## 🚀 Usage
 
-### Basic Command
+### Quick Start
 
-```bash
-python main.py --left <path/to/left.jpg> --right <path/to/right.jpg> --out <output.ply>
+1. **Place your stereo images** in the project root directory:
+   - `left.jpeg` — Left camera position
+   - `right.jpeg` — Right camera position (shifted horizontally)
+
+2. **Run the pipeline**:
+   ```bash
+   python main.py
+   ```
+
+3. **View the results**:
+   - A matplotlib window will open with the depth map (hover to see depth values)
+   - An interactive 3D point cloud viewer will open (use mouse to zoom/pan/rotate)
+   - Output is saved to `output.ply`
+
+### Hardcoded Configuration
+
+Image paths are hardcoded in `main.py` (lines 7-9):
+```python
+LEFT_IMAGE_PATH = r"left.jpeg"
+RIGHT_IMAGE_PATH = r"right.jpeg"
+OUTPUT_PLY_PATH = r"output.ply"
 ```
 
-### Example
+### Interactive Controls
 
-```bash
-python main.py --left inputs/left.jpg --right inputs/right.jpg --out my_scene.ply
-```
+**Depth Map Window:**
+- 🖱️ Hover your mouse over any pixel to see its depth value in cm
 
-### Arguments
-
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `--left` | ✅ | Path to the left stereo image |
-| `--right` | ✅ | Path to the right stereo image |
-| `--out` | ❌ | Output filename (default: `output.ply`) |
+**3D Point Cloud Viewer:**
+- 🖱️ **Left-drag**: Rotate view
+- 🔍 **Scroll**: Zoom in/out
+- ✋ **Middle-drag** or **Shift+Left-drag**: Pan
+- ⌨️ **R**: Reset camera view
+- ⌨️ **Q**: Quit viewer
 
 ### How To Capture Stereo Pairs
 
-1. **Horizontal shift only** — Move your camera 5-10 cm to the right between shots (no rotation)
-2. **Same settings** — Keep focus, exposure, and zoom identical
-3. **Static scenes** — Moving objects will cause artifacts
-4. **Good lighting** — More texture = better feature matching
+**For Best Results (Tripod Method - Recommended):**
+1. **Use a tripod** — Mount camera on tripod for stable, parallel shots
+2. **Horizontal shift only** — Move tripod exactly horizontally (current config: 32 cm baseline)
+3. **No rotation** — Keep camera perfectly level between shots
+4. **Same settings** — Lock focus, exposure, and zoom
+5. **Static scenes** — No moving objects
+
+**For Handheld Captures:**
+- Set `SKIP_RECTIFICATION = False` in `src/config.py`
+- Move camera 5-10 cm horizontally (smaller baseline)
+- Update `BASELINE_CM` in config to match your movement
+- Results may be less accurate due to hand shake
 
 ---
 
@@ -141,19 +168,32 @@ Where:
 
 ## ⚙️ Configuration
 
-Edit `src/config.py` to match your camera hardware:
+Edit `src/config.py` to match your setup:
 
 ```python
 # Camera Intrinsic Parameters
 FOCAL_LENGTH_MM = 4.76        # Lens focal length
 SENSOR_WIDTH_MM = 6.40        # Physical sensor width
-BASELINE_CM = 5.0             # Distance between left/right shots
+BASELINE_CM = 32.0            # Distance between camera positions (CRITICAL)
 
 # Processing Parameters
 TARGET_WIDTH = 1000           # Resize width (affects speed)
-SGBM_NUM_DISPARITIES = 160    # Max disparity range (multiple of 16)
-SGBM_BLOCK_SIZE = 5           # Matching block size (odd number)
+SGBM_NUM_DISPARITIES = 256    # Max disparity range (larger for bigger baseline)
+SGBM_BLOCK_SIZE = 7           # Matching block size (odd number)
+
+# Rectification Settings
+SKIP_RECTIFICATION = True     # Set True for tripod captures, False for handheld
+
+# WLS Filter Parameters
+WLS_LAMBDA = 8000.0           # Regularization strength
+WLS_SIGMA = 1.5               # Edge sensitivity
 ```
+
+### Important Notes:
+
+- **`BASELINE_CM`** — Must match your actual camera movement distance (currently 32 cm)
+- **`SKIP_RECTIFICATION`** — Set to `True` if using tripod with purely horizontal movement (recommended). Set to `False` for handheld captures
+- **`SGBM_NUM_DISPARITIES`** — Must be divisible by 16. Increase for larger baselines
 
 > You can find your phone's focal length and sensor size in the EXIF data of your photos or on [GSMArena](https://www.gsmarena.com/).
 
@@ -177,16 +217,27 @@ StereoDepth-Monocular-3DReconstruction/
 ## 📊 Output Visualization
 
 Running the pipeline generates:
-1. **Interactive matplotlib plots** showing:
-   - Rectified left image
-   - Disparity map (WLS filtered)
-   - Depth map with colorbar (in cm)
-2. **PLY point cloud file** for 3D viewing
 
-### Viewing Point Clouds
-- [**MeshLab**](https://www.meshlab.net/) — Free, cross-platform
-- [**CloudCompare**](https://www.cloudcompare.org/) — Advanced point cloud processing
-- [**Blender**](https://www.blender.org/) — Import via PLY importer add-on
+### 1. Interactive Depth Map Window
+- **Left view**: Original/rectified image
+- **Disparity map**: Pixel correspondence (WLS filtered)
+- **Depth map**: Estimated depth in cm with colorbar
+- **🖱️ Hover feature**: Move mouse over depth map to see exact depth values at each pixel
+
+### 2. Interactive 3D Point Cloud Viewer (Open3D)
+- **Real-time controls**:
+  - Rotate with left mouse drag
+  - Zoom with scroll wheel
+  - Pan with middle mouse or Shift+Left drag
+  - Press `R` to reset view
+  - Press `Q` to quit
+- **Full-color 3D reconstruction** from your stereo pair
+
+### 3. Exported PLY File (`output.ply`)
+- View in external software:
+  - [**MeshLab**](https://www.meshlab.net/) — Free, cross-platform
+  - [**CloudCompare**](https://www.cloudcompare.org/) — Advanced point cloud processing
+  - [**Blender**](https://www.blender.org/) — Import via PLY importer add-on
 
 ---
 
