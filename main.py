@@ -1,10 +1,20 @@
-import argparse
 from src import config
 from src.core import StereoPipeline
-from src.utils import load_image, visualize_results, save_point_cloud
+from src.utils import (
+    load_image, 
+    save_point_cloud, 
+    visualize_results_interactive,
+    view_interactive_pointcloud
+)
 import cv2
 
-def main(left_path, right_path, output_ply):
+# Hardcoded image paths (project root directory)
+LEFT_IMAGE_PATH = r"l.jpeg"
+RIGHT_IMAGE_PATH = r"r.jpeg"
+OUTPUT_PLY_PATH = r"output.ply"
+
+
+def main():
     # Initialize Pipeline
     pipeline = StereoPipeline(
         focal_length_mm=config.FOCAL_LENGTH_MM,
@@ -14,38 +24,45 @@ def main(left_path, right_path, output_ply):
     )
 
     # Load Images
-    imgL = load_image(left_path, config.TARGET_WIDTH)
-    imgR = load_image(right_path, config.TARGET_WIDTH)
+    imgL = load_image(LEFT_IMAGE_PATH, config.TARGET_WIDTH)
+    imgR = load_image(RIGHT_IMAGE_PATH, config.TARGET_WIDTH)
 
-    # Rectify
-    imgL, imgR = pipeline.rectify_images(imgL, imgR)
+    # Rectify (skip if images are already properly aligned)
+    if config.SKIP_RECTIFICATION:
+        print("[INFO] Skipping rectification (images assumed to be pre-aligned)")
+    else:
+        imgL, imgR = pipeline.rectify_images(imgL, imgR)
 
     # Compute Disparity
     disparity = pipeline.compute_disparity(
         imgL, imgR, 
         num_disp=config.SGBM_NUM_DISPARITIES, 
-        block_size=config.SGBM_BLOCK_SIZE
+        block_size=config.SGBM_BLOCK_SIZE,
+        wls_lambda=config.WLS_LAMBDA,
+        wls_sigma=config.WLS_SIGMA
     )
 
     # Compute Depth
     depth_map = pipeline.calculate_depth(disparity)
 
-    # Save Point Cloud
+    # Save Point Cloud to PLY file
     save_point_cloud(
         depth_map, 
         cv2.cvtColor(imgL, cv2.COLOR_BGR2RGB), 
         pipeline.f_pixel, 
-        output_ply
+        OUTPUT_PLY_PATH
     )
 
-    # Visualize
-    visualize_results(imgL, disparity, depth_map)
+    # Visualize with interactive depth hover
+    visualize_results_interactive(imgL, disparity, depth_map)
+
+    # Open interactive 3D point cloud viewer (zoom, pan, tilt)
+    view_interactive_pointcloud(
+        depth_map, 
+        cv2.cvtColor(imgL, cv2.COLOR_BGR2RGB), 
+        pipeline.f_pixel
+    )
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Stereo Depth Estimation Engine")
-    parser.add_argument("--left", required=True, help="Path to left image")
-    parser.add_argument("--right", required=True, help="Path to right image")
-    parser.add_argument("--out", default="output.ply", help="Output filename for 3D cloud")
-    
-    args = parser.parse_args()
-    main(args.left, args.right, args.out)
+    main()

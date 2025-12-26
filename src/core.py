@@ -40,13 +40,13 @@ class StereoPipeline:
         
         return imgL_rect, imgR_rect
 
-    def compute_disparity(self, imgL, imgR, num_disp=160, block_size=5):
+    def compute_disparity(self, imgL, imgR, num_disp=160, block_size=5, wls_lambda=8000.0, wls_sigma=1.5):
         """Calculates disparity using SGBM and WLS smoothing."""
         print("[INFO] Computing Disparity...")
         grayL = cv2.cvtColor(imgL, cv2.COLOR_BGR2GRAY)
         grayR = cv2.cvtColor(imgR, cv2.COLOR_BGR2GRAY)
 
-        # SGBM Matcher
+        # SGBM Matcher - optimized for larger baseline
         left_matcher = cv2.StereoSGBM_create(
             minDisparity=0,
             numDisparities=num_disp,
@@ -54,16 +54,18 @@ class StereoPipeline:
             P1=8 * 3 * block_size**2,
             P2=32 * 3 * block_size**2,
             disp12MaxDiff=1,
-            uniquenessRatio=10,
-            speckleWindowSize=100,
-            speckleRange=32
+            uniquenessRatio=5,  # Reduced for larger baseline
+            speckleWindowSize=200,  # Increased to filter more noise
+            speckleRange=2,  # Reduced for stricter filtering
+            preFilterCap=63,  # Added pre-filter for better texture handling
+            mode=cv2.STEREO_SGBM_MODE_SGBM_3WAY  # Higher quality mode
         )
         
         # WLS Filter for smoothness
         right_matcher = cv2.ximgproc.createRightMatcher(left_matcher)
         wls_filter = cv2.ximgproc.createDisparityWLSFilter(matcher_left=left_matcher)
-        wls_filter.setLambda(8000.0)
-        wls_filter.setSigmaColor(1.5)
+        wls_filter.setLambda(wls_lambda)
+        wls_filter.setSigmaColor(wls_sigma)
 
         dispL = left_matcher.compute(grayL, grayR)
         dispR = right_matcher.compute(grayR, grayL)
