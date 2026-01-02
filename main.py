@@ -9,9 +9,10 @@ from src.utils import (
 import cv2
 
 # Hardcoded image paths (project root directory)
-LEFT_IMAGE_PATH = r"l.jpeg"
-RIGHT_IMAGE_PATH = r"r.jpeg"
-OUTPUT_PLY_PATH = r"output.ply"
+# Hardcoded image paths (project root directory)
+LEFT_IMAGE_PATH = r"inputs/left_15.jpeg"
+RIGHT_IMAGE_PATH = r"inputs/right.jpeg"
+OUTPUT_PLY_PATH = r"outputs/output.ply"
 
 
 def main():

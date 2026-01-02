@@ -21,6 +21,18 @@
 
 ---
 
+## 📸 Results for `inputs/left_15.jpeg` & `inputs/right.jpeg`
+
+| Left View | Right View |
+| :---: | :---: |
+| ![Left View](inputs/left_15.jpeg) | ![Right View](inputs/right.jpeg) |
+
+### 3D Reconstruction Output
+
+| Depth Map | Point Cloud |
+| :---: | :---: |
+| ![Depth Map](outputs/output.png) | ![3D Point Cloud](outputs/output_pointcloud.png) |
+
 ## ✨ Features
 
 | Feature | Description |

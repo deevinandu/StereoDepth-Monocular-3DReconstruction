@@ -1,5 +1,10 @@
 import cv2
 import numpy as np
+import matplotlib
+try:
+    matplotlib.use('TkAgg')
+except Exception:
+    pass
 import matplotlib.pyplot as plt
 import open3d as o3d
 
